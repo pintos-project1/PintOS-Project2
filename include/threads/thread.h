@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -31,6 +32,10 @@ typedef int tid_t;
 #define NICE_DEFAULT 0
 #define RECENT_CPU_DEFAULT 0
 #define LOAD_AVG_DEFAULT 0
+
+/** #Project 2: System Call */
+#define FDT_PAGES     3                     // test `multi-oom` 테스트용
+#define FDCOUNT_LIMIT FDT_PAGES * (1 << 9)  // 엔트리가 512개 인 이유: 페이지 크기 4kb / 파일 포인터 8byte
 
 /* A kernel thread or user process.
  *
@@ -89,7 +94,7 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
-struct thread
+typedef struct thread
 {
 	/* Owned by thread.c. */
 	tid_t tid;				   /* Thread identifier. */
@@ -116,6 +121,21 @@ struct thread
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
+
+	 /** #Project 2: System Call */
+    int exit_status;
+
+    int fd_idx;              // 파일 디스크립터 인덱스
+    struct file **fdt;       // 파일 디스크립터 테이블
+    struct file *runn_file;  // 실행중인 파일
+
+    struct intr_frame parent_if;  // 부모 프로세스 if
+    struct list child_list;
+    struct list_elem child_elem;
+
+    struct semaphore fork_sema;  // fork가 완료될 때 signal
+    struct semaphore exit_sema;  // 자식 프로세스 종료 signal
+    struct semaphore wait_sema;  // exit_sema를 기다릴 때 사용
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -125,7 +145,7 @@ struct thread
 	/* Owned by thread.c. */
 	struct intr_frame tf; /* Information for switching */
 	unsigned magic;		  /* Detects stack overflow. */
-};
+}thread_t;
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
