@@ -210,6 +210,24 @@ tid_t thread_create(const char *name, int priority,
 	init_thread(t, name, priority);
 	tid = t->tid = allocate_tid();
 
+#ifdef USERPROG
+	/** #Project 2: System Call - 구조체 초기화 */
+	t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fdt == NULL)
+		return TID_ERROR;
+
+	t->exit_status = 0; // exit_status 초기화
+
+	t->fd_idx = 3;
+	t->fdt[0] = 0; // stdin 예약된 자리 (dummy)
+	t->fdt[1] = 1; // stdout 예약된 자리 (dummy)
+	t->fdt[2] = 2; // stderr 예약된 자리 (dummy)
+	/** ---------------------------------------- */
+
+	/** #Project 2: System Call - 현재 스레드의 자식 리스트에 추가 */
+	list_push_back(&thread_current()->child_list, &t->child_elem);
+#endif
+
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t)kernel_thread;
@@ -474,6 +492,17 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC;
 
 	list_push_back(&all_list, &t->allelem);
+
+#ifdef USERPROG
+	/** #Project 2: System Call  */
+	t->runn_file = NULL;
+
+	list_init(&t->child_list);
+	sema_init(&t->fork_sema, 0);
+	sema_init(&t->exit_sema, 0);
+	sema_init(&t->wait_sema, 0);
+	/** -----------------------  */
+#endif
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
