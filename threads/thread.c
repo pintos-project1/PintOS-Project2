@@ -190,7 +190,9 @@ void thread_test_preemption(void)
 	if (!list_empty(&ready_list) &&
 		thread_current()->priority <
 			list_entry(list_front(&ready_list), struct thread, elem)->priority)
+	{
 		thread_yield();
+	}
 }
 
 tid_t thread_create(const char *name, int priority,
@@ -211,7 +213,8 @@ tid_t thread_create(const char *name, int priority,
 	tid = t->tid = allocate_tid();
 
 #ifdef USERPROG
-	/** #Project 2: System Call - 구조체 초기화 */
+	/** #Project 2: System Call */
+	// 파일 디스크립터 테이블 초기화
 	t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
 	if (t->fdt == NULL)
 		return TID_ERROR;
@@ -494,7 +497,8 @@ init_thread(struct thread *t, const char *name, int priority)
 	list_push_back(&all_list, &t->allelem);
 
 #ifdef USERPROG
-	/** #Project 2: System Call  */
+	/** Project 2: System Call **/
+	// thread.h에 새롭게 선언한 리스트, 세마포어 변수들 초기화
 	t->runn_file = NULL;
 
 	list_init(&t->child_list);
@@ -775,8 +779,7 @@ void refresh_priority(void)
 	}
 }
 
-//
-
+/**  Project 1: MLFQS **/
 void mlfqs_calculate_priority(struct thread *t)
 {
 	if (t == idle_thread)

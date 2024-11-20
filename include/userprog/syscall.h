@@ -8,7 +8,7 @@ void syscall_init(void);
 /* Process identifier. */
 typedef int pid_t;
 
-/** #Project 2: System Call */
+/** #Project 2: System Call **/
 void check_address(void *addr);
 
 void halt(void);
